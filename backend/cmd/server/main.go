@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/yahyayesilyurt/league-simulation/config"
 )
 
 func main() {
@@ -13,6 +14,8 @@ func main() {
         log.Println("No .env file found, using environment variables")
     }
 
+    config.ConnectDatabase()
+    
     r := gin.Default()
 
     r.GET("/health", func(c *gin.Context) {
