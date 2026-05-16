@@ -28,5 +28,22 @@ go.work.sum
 .env
 
 # Editor/IDE
-# .idea/
-# .vscode/
+.idea/
+.vscode/
+
+# Env files
+.env
+.env.local
+.env.production
+
+# Frontend build
+frontend/dist
+frontend/node_modules
+
+# Go binary
+backend/tmp
+backend/*.exe
+
+# Swagger generated
+backend/docs/swagger.json
+backend/docs/swagger.yaml
