@@ -4,9 +4,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/yahyayesilyurt/league-simulation/config"
+	"github.com/yahyayesilyurt/league-simulation/internal/handler"
 )
 
 func main() {
@@ -15,17 +15,9 @@ func main() {
     }
 
     config.ConnectDatabase()
-
     config.SeedDatabase(config.DB)
     
-    r := gin.Default()
-
-    r.GET("/health", func(c *gin.Context) {
-        c.JSON(200, gin.H{
-            "status":  "ok",
-            "message": "League Simulation is running",
-        })
-    })
+    r := handler.SetupRouter(config.DB)
 
     port := os.Getenv("APP_PORT")
     if port == "" {
