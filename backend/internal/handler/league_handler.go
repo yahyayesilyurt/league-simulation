@@ -90,11 +90,15 @@ func (h *LeagueHandler) PlayAll(c *gin.Context) {
 
 // POST /league/reset
 func (h *LeagueHandler) Reset(c *gin.Context) {
-	if err := h.leagueSvc.Reset(); err != nil {
+	status, err := h.leagueSvc.Reset()
+	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "League reset successfully"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "League reset successfully",
+		"status":  status,
+	})
 }
 
 // GET /league/predictions

@@ -15,7 +15,7 @@ type LeagueService interface {
 	GetStatus() (*model.LeagueStatus, error)
 	NextWeek() (*model.WeekResult, error)
 	PlayAll() (*model.PlayAllResult, error)
-	Reset() error
+	Reset() (*model.LeagueStatus, error)
 }
 
 type leagueService struct {
@@ -149,15 +149,28 @@ func (s *leagueService) PlayAll() (*model.PlayAllResult, error) {
 	}, nil
 }
 
-func (s *leagueService) Reset() error {
+func (s *leagueService) Reset() (*model.LeagueStatus, error) {
 	if err := s.matchRepo.DeleteAll(); err != nil {
-		return err
+		return nil, fmt.Errorf("failed to delete matches: %w", err)
 	}
+
 	if err := s.standingRepo.ResetAll(); err != nil {
-		return err
+		return nil, fmt.Errorf("failed to reset standings: %w", err)
 	}
+
 	fixtureSvc := NewFixtureService(s.matchRepo, s.teamRepo)
-	return fixtureSvc.GenerateFixture()
+	if err := fixtureSvc.GenerateFixture(); err != nil {
+		return nil, fmt.Errorf("failed to regenerate fixture: %w", err)
+	}
+
+	return &model.LeagueStatus{
+		CurrentWeek:    0,
+		TotalWeeks:     6,
+		LeagueFinished: false,
+		MatchesPlayed:  0,
+		MatchesLeft:    12,
+		Status:         "not_started",
+	}, nil
 }
 
 func (s *leagueService) GetStatus() (*model.LeagueStatus, error) {
