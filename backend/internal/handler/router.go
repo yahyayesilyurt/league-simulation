@@ -18,9 +18,11 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	// Create services
 	leagueSvc     := service.NewLeagueService(matchRepo, standingRepo, teamRepo)
 	predictionSvc := service.NewPredictionService(standingRepo, matchRepo)
+	fixtureSvc    := service.NewFixtureService(matchRepo, teamRepo)
 
 	// Create handlers
 	leagueHandler := NewLeagueHandler(leagueSvc, predictionSvc)
+	fixtureHandler := NewFixtureHandler(fixtureSvc)
 
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
@@ -33,13 +35,15 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	// League routes
 	league := r.Group("/league")
 	{
-		league.GET("/table",       leagueHandler.GetStandings)
-		league.GET("/fixtures",    leagueHandler.GetFixtures)
-		league.GET("/week/:weekNo", leagueHandler.GetWeek)
-		league.GET("/predictions", leagueHandler.GetPredictions)
-		league.POST("/next-week",  leagueHandler.NextWeek)
-		league.POST("/play-all",   leagueHandler.PlayAll)
-		league.POST("/reset",      leagueHandler.Reset)
+		league.GET("/table",            leagueHandler.GetStandings)
+		league.GET("/fixtures",         leagueHandler.GetFixtures)
+		league.GET("/week/:weekNo",     leagueHandler.GetWeek)
+		league.GET("/predictions",      leagueHandler.GetPredictions)
+		league.GET("/fixture-status",   fixtureHandler.GetFixtureStatus)
+		league.POST("/generate-fixture", fixtureHandler.GenerateFixture)
+		league.POST("/next-week",       leagueHandler.NextWeek)
+		league.POST("/play-all",        leagueHandler.PlayAll)
+		league.POST("/reset",           leagueHandler.Reset)
 	}
 
 	return r
