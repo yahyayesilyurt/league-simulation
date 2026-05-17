@@ -50,7 +50,6 @@ func (h *LeagueHandler) GetWeek(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid week number (1-6)"})
 		return
 	}
-
 	matches, err := h.leagueSvc.GetWeek(weekNo)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -61,12 +60,12 @@ func (h *LeagueHandler) GetWeek(c *gin.Context) {
 
 // POST /league/next-week
 func (h *LeagueHandler) NextWeek(c *gin.Context) {
-	matches, err := h.leagueSvc.NextWeek()
+	result, err := h.leagueSvc.NextWeek()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"matches": matches})
+	c.JSON(http.StatusOK, result)
 }
 
 // POST /league/play-all
@@ -76,7 +75,10 @@ func (h *LeagueHandler) PlayAll(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"results": results})
+	c.JSON(http.StatusOK, gin.H{
+		"total_weeks": len(results),
+		"weeks":       results,
+	})
 }
 
 // POST /league/reset

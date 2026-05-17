@@ -12,8 +12,8 @@ type LeagueService interface {
 	GetFixtures() ([]model.Match, error)
 	GetWeek(week int) ([]model.Match, error)
 	GetCurrentWeek() (int, error)
-	NextWeek() ([]model.Match, error)
-	PlayAll() (map[int][]model.Match, error)
+	NextWeek() (*model.WeekResult, error)
+	PlayAll() ([]model.WeekResult, error)
 	Reset() error
 }
 
@@ -22,6 +22,7 @@ type leagueService struct {
 	standingRepo repository.StandingRepository
 	teamRepo     repository.TeamRepository
 	matchSvc     MatchService
+	predictionSvc PredictionService
 }
 
 func NewLeagueService(
@@ -30,10 +31,11 @@ func NewLeagueService(
 	teamRepo repository.TeamRepository,
 ) LeagueService {
 	return &leagueService{
-		matchRepo:    matchRepo,
-		standingRepo: standingRepo,
-		teamRepo:     teamRepo,
-		matchSvc:     NewMatchService(matchRepo, standingRepo, teamRepo),
+		matchRepo:     matchRepo,
+		standingRepo:  standingRepo,
+		teamRepo:      teamRepo,
+		matchSvc:      NewMatchService(matchRepo, standingRepo, teamRepo),
+		predictionSvc: NewPredictionService(standingRepo, matchRepo, teamRepo),
 	}
 }
 
@@ -63,7 +65,7 @@ func (s *leagueService) GetCurrentWeek() (int, error) {
 	return currentWeek, nil
 }
 
-func (s *leagueService) NextWeek() ([]model.Match, error) {
+func (s *leagueService) NextWeek() (*model.WeekResult, error) {
 	currentWeek, err := s.GetCurrentWeek()
 	if err != nil {
 		return nil, err
@@ -74,26 +76,63 @@ func (s *leagueService) NextWeek() ([]model.Match, error) {
 		return nil, fmt.Errorf("league is finished, all 6 weeks have been played")
 	}
 
-	return s.matchSvc.PlayWeek(nextWeek)
-}
-
-func (s *leagueService) PlayAll() (map[int][]model.Match, error) {
-	currentWeek, err := s.GetCurrentWeek()
+	matches, err := s.matchSvc.PlayWeek(nextWeek)
 	if err != nil {
 		return nil, err
 	}
 
+	standings, err := s.standingRepo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	predictions, err := s.predictionSvc.GetPredictions()
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.WeekResult{
+		Week:           nextWeek,
+		Matches:        matches,
+		Standings:      standings,
+		Predictions:    predictions,
+		LeagueFinished: nextWeek == 6,
+	}, nil
+}
+
+func (s *leagueService) PlayAll() ([]model.WeekResult, error) {
+	currentWeek, err := s.GetCurrentWeek()
+	if err != nil {
+		return nil, err
+	}
 	if currentWeek >= 6 {
 		return nil, fmt.Errorf("league is already finished")
 	}
 
-	results := make(map[int][]model.Match)
+	var results []model.WeekResult
 	for week := currentWeek + 1; week <= 6; week++ {
 		matches, err := s.matchSvc.PlayWeek(week)
 		if err != nil {
 			return nil, fmt.Errorf("error playing week %d: %w", week, err)
 		}
-		results[week] = matches
+
+		standings, err := s.standingRepo.GetAll()
+		if err != nil {
+			return nil, err
+		}
+
+		predictions, err := s.predictionSvc.GetPredictions()
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, model.WeekResult{
+			Week:           week,
+			Matches:        matches,
+			Standings:      standings,
+			Predictions:    predictions,
+			LeagueFinished: week == 6,
+		})
 	}
 
 	return results, nil
@@ -106,13 +145,6 @@ func (s *leagueService) Reset() error {
 	if err := s.standingRepo.ResetAll(); err != nil {
 		return err
 	}
-
-	teams, err := s.teamRepo.GetAll()
-	if err != nil {
-		return err
-	}
-
 	fixtureSvc := NewFixtureService(s.matchRepo, s.teamRepo)
-	_ = teams
 	return fixtureSvc.GenerateFixture()
 }
