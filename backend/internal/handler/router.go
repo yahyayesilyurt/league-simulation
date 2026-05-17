@@ -18,7 +18,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	// Services
 	matchSvc      := service.NewMatchService(matchRepo, standingRepo, teamRepo)
 	leagueSvc     := service.NewLeagueService(matchRepo, standingRepo, teamRepo)
-	predictionSvc := service.NewPredictionService(standingRepo, matchRepo)
+	predictionSvc := service.NewPredictionService(standingRepo, matchRepo, teamRepo)
 	fixtureSvc    := service.NewFixtureService(matchRepo, teamRepo)
 	standingSvc   := service.NewStandingService(standingRepo, matchRepo, teamRepo)
 
