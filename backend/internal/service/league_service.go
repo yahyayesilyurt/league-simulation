@@ -1,6 +1,8 @@
 package service
 
 import (
+	"fmt"
+
 	"github.com/yahyayesilyurt/league-simulation/internal/model"
 	"github.com/yahyayesilyurt/league-simulation/internal/repository"
 )
@@ -16,9 +18,10 @@ type LeagueService interface {
 }
 
 type leagueService struct {
-	matchRepo   repository.MatchRepository
+	matchRepo    repository.MatchRepository
 	standingRepo repository.StandingRepository
-	teamRepo    repository.TeamRepository
+	teamRepo     repository.TeamRepository
+	matchSvc     MatchService
 }
 
 func NewLeagueService(
@@ -30,6 +33,7 @@ func NewLeagueService(
 		matchRepo:    matchRepo,
 		standingRepo: standingRepo,
 		teamRepo:     teamRepo,
+		matchSvc:     NewMatchService(matchRepo, standingRepo),
 	}
 }
 
@@ -50,7 +54,6 @@ func (s *leagueService) GetCurrentWeek() (int, error) {
 	if err != nil {
 		return 0, err
 	}
-
 	currentWeek := 0
 	for _, m := range matches {
 		if m.Played && m.Week > currentWeek {
@@ -61,13 +64,55 @@ func (s *leagueService) GetCurrentWeek() (int, error) {
 }
 
 func (s *leagueService) NextWeek() ([]model.Match, error) {
-	return nil, nil
+	currentWeek, err := s.GetCurrentWeek()
+	if err != nil {
+		return nil, err
+	}
+
+	nextWeek := currentWeek + 1
+	if nextWeek > 6 {
+		return nil, fmt.Errorf("league is finished, all 6 weeks have been played")
+	}
+
+	return s.matchSvc.PlayWeek(nextWeek)
 }
 
 func (s *leagueService) PlayAll() (map[int][]model.Match, error) {
-	return nil, nil
+	currentWeek, err := s.GetCurrentWeek()
+	if err != nil {
+		return nil, err
+	}
+
+	if currentWeek >= 6 {
+		return nil, fmt.Errorf("league is already finished")
+	}
+
+	results := make(map[int][]model.Match)
+	for week := currentWeek + 1; week <= 6; week++ {
+		matches, err := s.matchSvc.PlayWeek(week)
+		if err != nil {
+			return nil, fmt.Errorf("error playing week %d: %w", week, err)
+		}
+		results[week] = matches
+	}
+
+	return results, nil
 }
 
 func (s *leagueService) Reset() error {
-	return nil
+	if err := s.matchRepo.DeleteAll(); err != nil {
+		return err
+	}
+	if err := s.standingRepo.ResetAll(); err != nil {
+		return err
+	}
+
+	teams, err := s.teamRepo.GetAll()
+	if err != nil {
+		return err
+	}
+
+	fixtureSvc := NewFixtureService(s.matchRepo, s.teamRepo)
+	_ = teams
+	return fixtureSvc.GenerateFixture()
 }
