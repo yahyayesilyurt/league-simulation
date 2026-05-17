@@ -12,8 +12,9 @@ type LeagueService interface {
 	GetFixtures() ([]model.Match, error)
 	GetWeek(week int) ([]model.Match, error)
 	GetCurrentWeek() (int, error)
+	GetStatus() (*model.LeagueStatus, error)
 	NextWeek() (*model.WeekResult, error)
-	PlayAll() ([]model.WeekResult, error)
+	PlayAll() (*model.PlayAllResult, error)
 	Reset() error
 }
 
@@ -100,7 +101,7 @@ func (s *leagueService) NextWeek() (*model.WeekResult, error) {
 	}, nil
 }
 
-func (s *leagueService) PlayAll() ([]model.WeekResult, error) {
+func (s *leagueService) PlayAll() (*model.PlayAllResult, error) {
 	currentWeek, err := s.GetCurrentWeek()
 	if err != nil {
 		return nil, err
@@ -109,7 +110,8 @@ func (s *leagueService) PlayAll() ([]model.WeekResult, error) {
 		return nil, fmt.Errorf("league is already finished")
 	}
 
-	var results []model.WeekResult
+	var weekResults []model.WeekResult
+
 	for week := currentWeek + 1; week <= 6; week++ {
 		matches, err := s.matchSvc.PlayWeek(week)
 		if err != nil {
@@ -126,7 +128,7 @@ func (s *leagueService) PlayAll() ([]model.WeekResult, error) {
 			return nil, err
 		}
 
-		results = append(results, model.WeekResult{
+		weekResults = append(weekResults, model.WeekResult{
 			Week:           week,
 			Matches:        matches,
 			Standings:      standings,
@@ -135,7 +137,16 @@ func (s *leagueService) PlayAll() ([]model.WeekResult, error) {
 		})
 	}
 
-	return results, nil
+	finalStandings, err := s.standingRepo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.PlayAllResult{
+		TotalWeeksPlayed: len(weekResults),
+		Weeks:            weekResults,
+		Summary:          s.buildSummary(finalStandings),
+	}, nil
 }
 
 func (s *leagueService) Reset() error {
@@ -147,4 +158,69 @@ func (s *leagueService) Reset() error {
 	}
 	fixtureSvc := NewFixtureService(s.matchRepo, s.teamRepo)
 	return fixtureSvc.GenerateFixture()
+}
+
+func (s *leagueService) GetStatus() (*model.LeagueStatus, error) {
+	matches, err := s.matchRepo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	played := 0
+	for _, m := range matches {
+		if m.Played {
+			played++
+		}
+	}
+
+	total       := len(matches) 
+	left        := total - played
+	currentWeek, _ := s.GetCurrentWeek()
+
+	status := "not_started"
+	if played > 0 && left > 0 {
+		status = "in_progress"
+	} else if left == 0 && total > 0 {
+		status = "finished"
+	}
+
+	return &model.LeagueStatus{
+		CurrentWeek:    currentWeek,
+		TotalWeeks:     6,
+		LeagueFinished: left == 0 && total > 0,
+		MatchesPlayed:  played,
+		MatchesLeft:    left,
+		Status:         status,
+	}, nil
+}
+
+func (s *leagueService) buildSummary(standings []model.Standing) *model.LeagueSummary {
+	if len(standings) == 0 {
+		return nil
+	}
+
+	champion := standings[0]
+
+	topScorer    := standings[0]
+	bestDefense  := standings[0]
+	totalGoals   := 0
+
+	for _, st := range standings {
+		totalGoals += st.GoalsFor
+		if st.GoalsFor > topScorer.GoalsFor {
+			topScorer = st
+		}
+		if st.GoalsAgainst < bestDefense.GoalsAgainst {
+			bestDefense = st
+		}
+	}
+
+	return &model.LeagueSummary{
+		Champion:       &champion,
+		FinalStandings: standings,
+		TopScorer:      topScorer.Team.Name,
+		BestDefense:    bestDefense.Team.Name,
+		TotalGoals:     totalGoals,
+		TotalMatches:   12,
+	}
 }

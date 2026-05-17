@@ -44,6 +44,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 		league.GET("/fixture-status",    fixtureHandler.GetFixtureStatus)
 		league.POST("/generate-fixture", fixtureHandler.GenerateFixture)
 		league.POST("/next-week",        leagueHandler.NextWeek)
+		league.GET("/status", 			 leagueHandler.GetStatus)
 		league.POST("/play-all",         leagueHandler.PlayAll)
 		league.POST("/reset",            leagueHandler.Reset)
 	}

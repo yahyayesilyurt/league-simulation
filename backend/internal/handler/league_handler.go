@@ -68,17 +68,24 @@ func (h *LeagueHandler) NextWeek(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// GET /league/status
+func (h *LeagueHandler) GetStatus(c *gin.Context) {
+	status, err := h.leagueSvc.GetStatus()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, status)
+}
+
 // POST /league/play-all
 func (h *LeagueHandler) PlayAll(c *gin.Context) {
-	results, err := h.leagueSvc.PlayAll()
+	result, err := h.leagueSvc.PlayAll()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{
-		"total_weeks": len(results),
-		"weeks":       results,
-	})
+	c.JSON(http.StatusOK, result)
 }
 
 // POST /league/reset
