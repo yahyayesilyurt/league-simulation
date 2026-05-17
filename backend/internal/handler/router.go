@@ -2,13 +2,19 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
+	"github.com/yahyayesilyurt/league-simulation/internal/cache"
 	"github.com/yahyayesilyurt/league-simulation/internal/repository"
 	"github.com/yahyayesilyurt/league-simulation/internal/service"
 	"gorm.io/gorm"
 )
 
-func SetupRouter(db *gorm.DB) *gin.Engine {
+func SetupRouter(db *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	r := gin.Default()
+
+	// Cache
+	appCache := cache.NewCache(redisClient)
+	_ = appCache 
 
 	// Repositories
 	teamRepo     := repository.NewTeamRepository(db)
@@ -27,12 +33,12 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	fixtureHandler := NewFixtureHandler(fixtureSvc)
 	matchHandler   := NewMatchHandler(matchSvc, standingSvc)
 
-	_ = matchSvc   
-	_ = standingSvc 
-
 	// Health check
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "message": "League Simulation is running"})
+		c.JSON(200, gin.H{
+			"status":  "ok",
+			"message": "League Simulation is running",
+		})
 	})
 
 	// League routes
@@ -42,10 +48,10 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 		league.GET("/fixtures",          leagueHandler.GetFixtures)
 		league.GET("/week/:weekNo",      leagueHandler.GetWeek)
 		league.GET("/predictions",       leagueHandler.GetPredictions)
+		league.GET("/status",            leagueHandler.GetStatus)
 		league.GET("/fixture-status",    fixtureHandler.GetFixtureStatus)
 		league.POST("/generate-fixture", fixtureHandler.GenerateFixture)
 		league.POST("/next-week",        leagueHandler.NextWeek)
-		league.GET("/status", 			 leagueHandler.GetStatus)
 		league.POST("/play-all",         leagueHandler.PlayAll)
 		league.POST("/reset",            leagueHandler.Reset)
 	}
