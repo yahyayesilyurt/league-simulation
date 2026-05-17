@@ -25,6 +25,7 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 	// Handlers
 	leagueHandler  := NewLeagueHandler(leagueSvc, predictionSvc)
 	fixtureHandler := NewFixtureHandler(fixtureSvc)
+	matchHandler   := NewMatchHandler(matchSvc, standingSvc)
 
 	_ = matchSvc   
 	_ = standingSvc 
@@ -47,6 +48,13 @@ func SetupRouter(db *gorm.DB) *gin.Engine {
 		league.GET("/status", 			 leagueHandler.GetStatus)
 		league.POST("/play-all",         leagueHandler.PlayAll)
 		league.POST("/reset",            leagueHandler.Reset)
+	}
+
+	// Match routes
+	match := r.Group("/match")
+	{
+		match.GET("/:id",        matchHandler.GetMatch)
+		match.PUT("/:id/result", matchHandler.UpdateResult)
 	}
 
 	return r

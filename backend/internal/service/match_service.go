@@ -11,6 +11,7 @@ type MatchService interface {
 	PlayMatch(matchID uint) (*model.Match, error)
 	PlayWeek(week int) ([]model.Match, error)
 	UpdateMatchResult(matchID uint, homeGoals, awayGoals int) (*model.Match, error)
+	GetMatchByID(matchID uint) (*model.Match, error)
 }
 
 type matchService struct {
@@ -160,4 +161,8 @@ func (s *matchService) updateStandings(match *model.Match) error {
 		return err
 	}
 	return s.standingRepo.Update(awayStanding)
+}
+
+func (s *matchService) GetMatchByID(matchID uint) (*model.Match, error) {
+	return s.matchRepo.GetByID(matchID)
 }
