@@ -15,6 +15,8 @@ func main() {
     }
 
     config.ConnectDatabase()
+
+    config.SeedDatabase(config.DB)
     
     r := gin.Default()
 
