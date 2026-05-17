@@ -33,7 +33,7 @@ func NewLeagueService(
 		matchRepo:    matchRepo,
 		standingRepo: standingRepo,
 		teamRepo:     teamRepo,
-		matchSvc:     NewMatchService(matchRepo, standingRepo),
+		matchSvc:     NewMatchService(matchRepo, standingRepo, teamRepo),
 	}
 }
 
