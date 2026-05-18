@@ -13,7 +13,9 @@ import (
 )
 
 func SetupRouter(db *gorm.DB, redisClient *redis.Client) *gin.Engine {
-	r := gin.Default()
+	r := gin.New()
+	r.Use(gin.Recovery())                  
+	r.Use(middleware.RequestLogger())      
 
 	appCache := cache.NewCache(redisClient)
 

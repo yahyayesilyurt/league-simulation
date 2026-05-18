@@ -20,10 +20,10 @@
 package main
 
 import (
-	"log"
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/rs/zerolog/log"
 	"github.com/yahyayesilyurt/league-simulation/config"
 	_ "github.com/yahyayesilyurt/league-simulation/docs"
 	"github.com/yahyayesilyurt/league-simulation/internal/handler"
@@ -33,9 +33,10 @@ import (
 
 func main() {
 	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, using environment variables")
+		log.Warn().Msg("No .env file found, using environment variables")
 	}
 
+	config.InitLogger()
 	config.ConnectDatabase()
 	config.ConnectRedis()
 	config.SeedDatabase(config.DB)
@@ -45,9 +46,9 @@ func main() {
 	fixtureSvc := service.NewFixtureService(matchRepo, teamRepo)
 
 	if err := fixtureSvc.GenerateFixture(); err != nil {
-		log.Printf("Fixture info: %s", err.Error())
+		log.Info().Str("info", err.Error()).Msg("Fixture status")
 	} else {
-		log.Println("Fixture generated successfully")
+		log.Info().Msg("Fixture generated successfully")
 	}
 
 	r := handler.SetupRouter(config.DB, config.RedisClient)
@@ -57,6 +58,6 @@ func main() {
 		port = "8080"
 	}
 
-	log.Printf("Server starting on port %s", port)
+	log.Info().Str("port", port).Msg("Server starting")
 	r.Run(":" + port)
 }
