@@ -15,7 +15,17 @@ func NewAuthHandler(authSvc service.AuthService) *AuthHandler {
 	return &AuthHandler{authSvc: authSvc}
 }
 
-// POST /auth/login
+// Login godoc
+// @Summary      Admin login
+// @Description  You can take JWT tokens with your username and password.
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        credentials  body      object{username=string,password=string}  true  "Username and password"
+// @Success      200          {object}  object{token=string,message=string}
+// @Failure      400          {object}  object{error=string}
+// @Failure      401          {object}  object{error=string}
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req struct {
 		Username string `json:"username" binding:"required"`

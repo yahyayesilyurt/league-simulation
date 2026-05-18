@@ -2,4 +2,4 @@ tmp/
 *.exe
 *.test
 .env
-docs/
+# docs/

@@ -23,7 +23,19 @@ func NewMatchHandler(
 	}
 }
 
-// PUT /match/:id/result
+// UpdateResult godoc
+// @Summary      Match result update (Admin)
+// @Description  It updates the score of a played match and recalculates the league table.
+// @Tags         match
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id      path      int                                          true  "Match ID"
+// @Param        result  body      object{home_goals=int,away_goals=int}  true  "New Score"
+// @Success      200     {object}  object{message=string,match=model.Match,standings=[]model.Standing}
+// @Failure      400     {object}  object{error=string}
+// @Failure      401     {object}  object{error=string}
+// @Router       /match/{id}/result [put]
 func (h *MatchHandler) UpdateResult(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil || id < 1 {
@@ -62,7 +74,16 @@ func (h *MatchHandler) UpdateResult(c *gin.Context) {
 	})
 }
 
-// GET /match/:id
+// GetMatch godoc
+// @Summary      Match details
+// @Description  Returns match details based on ID.
+// @Tags         match
+// @Produce      json
+// @Param        id   path      int  true  "Match ID"
+// @Success      200  {object}  object{match=model.Match}
+// @Failure      400  {object}  object{error=string}
+// @Failure      404  {object}  object{error=string}
+// @Router       /match/{id} [get]
 func (h *MatchHandler) GetMatch(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil || id < 1 {

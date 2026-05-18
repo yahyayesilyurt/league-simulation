@@ -1,3 +1,22 @@
+// @title           League Simulation API
+// @version         1.0
+// @description     A four-team football league simulation API. Match simulation, league table, and championship prediction based on Premier League rules.
+// @termsOfService  http://swagger.io/terms/
+
+// @contact.name   API Support
+// @contact.email  admin@league-simulation.com
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description JWT token. Format: "Bearer <token>"
+
 package main
 
 import (
@@ -6,6 +25,7 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/yahyayesilyurt/league-simulation/config"
+	_ "github.com/yahyayesilyurt/league-simulation/docs"
 	"github.com/yahyayesilyurt/league-simulation/internal/handler"
 	"github.com/yahyayesilyurt/league-simulation/internal/repository"
 	"github.com/yahyayesilyurt/league-simulation/internal/service"

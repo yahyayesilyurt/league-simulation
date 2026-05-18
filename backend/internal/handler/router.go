@@ -3,6 +3,8 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/yahyayesilyurt/league-simulation/internal/cache"
 	"github.com/yahyayesilyurt/league-simulation/internal/middleware"
 	"github.com/yahyayesilyurt/league-simulation/internal/repository"
@@ -41,6 +43,8 @@ func SetupRouter(db *gorm.DB, redisClient *redis.Client) *gin.Engine {
 			"message": "League Simulation is running",
 		})
 	})
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Auth
 	r.POST("/auth/login", authHandler.Login)
