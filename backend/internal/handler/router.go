@@ -26,15 +26,19 @@ func SetupRouter(db *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	predictionSvc := service.NewPredictionService(standingRepo, matchRepo, teamRepo)
 	fixtureSvc    := service.NewFixtureService(matchRepo, teamRepo)
 	standingSvc   := service.NewStandingService(standingRepo, matchRepo, teamRepo)
+	authSvc     := service.NewAuthService()
 
 	// Handlers
 	leagueHandler  := NewLeagueHandler(leagueSvc, predictionSvc)
 	fixtureHandler := NewFixtureHandler(fixtureSvc)
 	matchHandler   := NewMatchHandler(matchSvc, standingSvc)
+	authHandler := NewAuthHandler(authSvc)
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok", "message": "League Simulation is running"})
 	})
+
+	r.POST("/auth/login", authHandler.Login)
 
 	league := r.Group("/league")
 	{
@@ -56,5 +60,6 @@ func SetupRouter(db *gorm.DB, redisClient *redis.Client) *gin.Engine {
 		match.PUT("/:id/result", matchHandler.UpdateResult)
 	}
 
+	
 	return r
 }
