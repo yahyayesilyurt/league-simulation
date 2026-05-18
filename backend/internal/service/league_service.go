@@ -1,8 +1,10 @@
 package service
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/yahyayesilyurt/league-simulation/internal/cache"
 	"github.com/yahyayesilyurt/league-simulation/internal/model"
 	"github.com/yahyayesilyurt/league-simulation/internal/repository"
 )
@@ -19,29 +21,46 @@ type LeagueService interface {
 }
 
 type leagueService struct {
-	matchRepo    repository.MatchRepository
-	standingRepo repository.StandingRepository
-	teamRepo     repository.TeamRepository
-	matchSvc     MatchService
+	matchRepo     repository.MatchRepository
+	standingRepo  repository.StandingRepository
+	teamRepo      repository.TeamRepository
+	matchSvc      MatchService
 	predictionSvc PredictionService
+	cache         *cache.Cache
 }
 
 func NewLeagueService(
 	matchRepo repository.MatchRepository,
 	standingRepo repository.StandingRepository,
 	teamRepo repository.TeamRepository,
+	appCache *cache.Cache,
 ) LeagueService {
 	return &leagueService{
 		matchRepo:     matchRepo,
 		standingRepo:  standingRepo,
 		teamRepo:      teamRepo,
-		matchSvc:      NewMatchService(matchRepo, standingRepo, teamRepo),
+		matchSvc:      NewMatchService(matchRepo, standingRepo, teamRepo, appCache),
 		predictionSvc: NewPredictionService(standingRepo, matchRepo, teamRepo),
+		cache:         appCache,
 	}
 }
 
 func (s *leagueService) GetStandings() ([]model.Standing, error) {
-	return s.standingRepo.GetAll()
+	ctx := context.Background()
+
+	var standings []model.Standing
+	if err := s.cache.GetJSON(ctx, cache.StandingsKey, &standings); err == nil {
+		return standings, nil 
+	}
+
+	standings, err := s.standingRepo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	_ = s.cache.SetJSON(ctx, cache.StandingsKey, standings)
+
+	return standings, nil
 }
 
 func (s *leagueService) GetFixtures() ([]model.Match, error) {
@@ -66,7 +85,53 @@ func (s *leagueService) GetCurrentWeek() (int, error) {
 	return currentWeek, nil
 }
 
+func (s *leagueService) GetStatus() (*model.LeagueStatus, error) {
+	ctx := context.Background()
+
+	var status model.LeagueStatus
+	if err := s.cache.GetJSON(ctx, cache.StatusKey, &status); err == nil {
+		return &status, nil
+	}
+
+	matches, err := s.matchRepo.GetAll()
+	if err != nil {
+		return nil, err
+	}
+
+	played := 0
+	for _, m := range matches {
+		if m.Played {
+			played++
+		}
+	}
+
+	total       := len(matches)
+	left        := total - played
+	currentWeek, _ := s.GetCurrentWeek()
+
+	st := "not_started"
+	if played > 0 && left > 0 {
+		st = "in_progress"
+	} else if left == 0 && total > 0 {
+		st = "finished"
+	}
+
+	result := &model.LeagueStatus{
+		CurrentWeek:    currentWeek,
+		TotalWeeks:     6,
+		LeagueFinished: left == 0 && total > 0,
+		MatchesPlayed:  played,
+		MatchesLeft:    left,
+		Status:         st,
+	}
+
+	_ = s.cache.SetJSON(ctx, cache.StatusKey, result)
+	return result, nil
+}
+
 func (s *leagueService) NextWeek() (*model.WeekResult, error) {
+	ctx := context.Background()
+
 	currentWeek, err := s.GetCurrentWeek()
 	if err != nil {
 		return nil, err
@@ -82,6 +147,8 @@ func (s *leagueService) NextWeek() (*model.WeekResult, error) {
 		return nil, err
 	}
 
+	_ = s.cache.InvalidateLeague(ctx)
+
 	standings, err := s.standingRepo.GetAll()
 	if err != nil {
 		return nil, err
@@ -91,6 +158,8 @@ func (s *leagueService) NextWeek() (*model.WeekResult, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	_ = s.cache.SetJSON(ctx, cache.StandingsKey, standings)
 
 	return &model.WeekResult{
 		Week:           nextWeek,
@@ -102,6 +171,8 @@ func (s *leagueService) NextWeek() (*model.WeekResult, error) {
 }
 
 func (s *leagueService) PlayAll() (*model.PlayAllResult, error) {
+	ctx := context.Background()
+
 	currentWeek, err := s.GetCurrentWeek()
 	if err != nil {
 		return nil, err
@@ -117,6 +188,8 @@ func (s *leagueService) PlayAll() (*model.PlayAllResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("error playing week %d: %w", week, err)
 		}
+
+		_ = s.cache.InvalidateLeague(ctx)
 
 		standings, err := s.standingRepo.GetAll()
 		if err != nil {
@@ -142,6 +215,8 @@ func (s *leagueService) PlayAll() (*model.PlayAllResult, error) {
 		return nil, err
 	}
 
+	_ = s.cache.SetJSON(ctx, cache.StandingsKey, finalStandings)
+
 	return &model.PlayAllResult{
 		TotalWeeksPlayed: len(weekResults),
 		Weeks:            weekResults,
@@ -150,10 +225,11 @@ func (s *leagueService) PlayAll() (*model.PlayAllResult, error) {
 }
 
 func (s *leagueService) Reset() (*model.LeagueStatus, error) {
+	ctx := context.Background()
+
 	if err := s.matchRepo.DeleteAll(); err != nil {
 		return nil, fmt.Errorf("failed to delete matches: %w", err)
 	}
-
 	if err := s.standingRepo.ResetAll(); err != nil {
 		return nil, fmt.Errorf("failed to reset standings: %w", err)
 	}
@@ -162,6 +238,8 @@ func (s *leagueService) Reset() (*model.LeagueStatus, error) {
 	if err := fixtureSvc.GenerateFixture(); err != nil {
 		return nil, fmt.Errorf("failed to regenerate fixture: %w", err)
 	}
+
+	_ = s.cache.InvalidateLeague(ctx)
 
 	return &model.LeagueStatus{
 		CurrentWeek:    0,
@@ -173,50 +251,15 @@ func (s *leagueService) Reset() (*model.LeagueStatus, error) {
 	}, nil
 }
 
-func (s *leagueService) GetStatus() (*model.LeagueStatus, error) {
-	matches, err := s.matchRepo.GetAll()
-	if err != nil {
-		return nil, err
-	}
-
-	played := 0
-	for _, m := range matches {
-		if m.Played {
-			played++
-		}
-	}
-
-	total       := len(matches) 
-	left        := total - played
-	currentWeek, _ := s.GetCurrentWeek()
-
-	status := "not_started"
-	if played > 0 && left > 0 {
-		status = "in_progress"
-	} else if left == 0 && total > 0 {
-		status = "finished"
-	}
-
-	return &model.LeagueStatus{
-		CurrentWeek:    currentWeek,
-		TotalWeeks:     6,
-		LeagueFinished: left == 0 && total > 0,
-		MatchesPlayed:  played,
-		MatchesLeft:    left,
-		Status:         status,
-	}, nil
-}
-
 func (s *leagueService) buildSummary(standings []model.Standing) *model.LeagueSummary {
 	if len(standings) == 0 {
 		return nil
 	}
 
-	champion := standings[0]
-
-	topScorer    := standings[0]
-	bestDefense  := standings[0]
-	totalGoals   := 0
+	champion    := standings[0]
+	topScorer   := standings[0]
+	bestDefense := standings[0]
+	totalGoals  := 0
 
 	for _, st := range standings {
 		totalGoals += st.GoalsFor

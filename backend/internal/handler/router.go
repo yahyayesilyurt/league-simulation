@@ -14,7 +14,6 @@ func SetupRouter(db *gorm.DB, redisClient *redis.Client) *gin.Engine {
 
 	// Cache
 	appCache := cache.NewCache(redisClient)
-	_ = appCache 
 
 	// Repositories
 	teamRepo     := repository.NewTeamRepository(db)
@@ -22,8 +21,8 @@ func SetupRouter(db *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	standingRepo := repository.NewStandingRepository(db)
 
 	// Services
-	matchSvc      := service.NewMatchService(matchRepo, standingRepo, teamRepo)
-	leagueSvc     := service.NewLeagueService(matchRepo, standingRepo, teamRepo)
+	matchSvc      := service.NewMatchService(matchRepo, standingRepo, teamRepo, appCache)
+	leagueSvc     := service.NewLeagueService(matchRepo, standingRepo, teamRepo, appCache)
 	predictionSvc := service.NewPredictionService(standingRepo, matchRepo, teamRepo)
 	fixtureSvc    := service.NewFixtureService(matchRepo, teamRepo)
 	standingSvc   := service.NewStandingService(standingRepo, matchRepo, teamRepo)
@@ -33,15 +32,10 @@ func SetupRouter(db *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	fixtureHandler := NewFixtureHandler(fixtureSvc)
 	matchHandler   := NewMatchHandler(matchSvc, standingSvc)
 
-	// Health check
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
-			"status":  "ok",
-			"message": "League Simulation is running",
-		})
+		c.JSON(200, gin.H{"status": "ok", "message": "League Simulation is running"})
 	})
 
-	// League routes
 	league := r.Group("/league")
 	{
 		league.GET("/table",             leagueHandler.GetStandings)
@@ -56,7 +50,6 @@ func SetupRouter(db *gorm.DB, redisClient *redis.Client) *gin.Engine {
 		league.POST("/reset",            leagueHandler.Reset)
 	}
 
-	// Match routes
 	match := r.Group("/match")
 	{
 		match.GET("/:id",        matchHandler.GetMatch)

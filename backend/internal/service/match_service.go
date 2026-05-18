@@ -1,8 +1,10 @@
 package service
 
 import (
+	"context"
 	"fmt"
 
+	"github.com/yahyayesilyurt/league-simulation/internal/cache"
 	"github.com/yahyayesilyurt/league-simulation/internal/model"
 	"github.com/yahyayesilyurt/league-simulation/internal/repository"
 )
@@ -20,12 +22,14 @@ type matchService struct {
 	teamRepo     repository.TeamRepository
 	engine       *SimulationEngine
 	standingSvc  StandingService
+	cache        *cache.Cache
 }
 
 func NewMatchService(
 	matchRepo repository.MatchRepository,
 	standingRepo repository.StandingRepository,
 	teamRepo repository.TeamRepository,
+	appCache *cache.Cache,
 ) MatchService {
 	return &matchService{
 		matchRepo:    matchRepo,
@@ -33,7 +37,12 @@ func NewMatchService(
 		teamRepo:     teamRepo,
 		engine:       NewSimulationEngine(),
 		standingSvc:  NewStandingService(standingRepo, matchRepo, teamRepo),
+		cache:        appCache,
 	}
+}
+
+func (s *matchService) GetMatchByID(matchID uint) (*model.Match, error) {
+	return s.matchRepo.GetByID(matchID)
 }
 
 func (s *matchService) PlayMatch(matchID uint) (*model.Match, error) {
@@ -57,7 +66,6 @@ func (s *matchService) PlayMatch(matchID uint) (*model.Match, error) {
 	if err := s.matchRepo.Update(match); err != nil {
 		return nil, fmt.Errorf("failed to update match: %w", err)
 	}
-
 	if err := s.updateStandings(match); err != nil {
 		return nil, fmt.Errorf("failed to update standings: %w", err)
 	}
@@ -93,8 +101,9 @@ func (s *matchService) PlayWeek(week int) ([]model.Match, error) {
 	return results, nil
 }
 
-// UpdateMatchResult — Updates the result, recalculates the table from scratch
 func (s *matchService) UpdateMatchResult(matchID uint, homeGoals, awayGoals int) (*model.Match, error) {
+	ctx := context.Background()
+
 	match, err := s.matchRepo.GetByID(matchID)
 	if err != nil {
 		return nil, fmt.Errorf("match not found: %w", err)
@@ -113,10 +122,11 @@ func (s *matchService) UpdateMatchResult(matchID uint, homeGoals, awayGoals int)
 		return nil, fmt.Errorf("failed to recalculate standings: %w", err)
 	}
 
+	_ = s.cache.InvalidateLeague(ctx)
+
 	return match, nil
 }
 
-// updateStandings — Quick update for a single match
 func (s *matchService) updateStandings(match *model.Match) error {
 	homeGoals := *match.HomeGoals
 	awayGoals := *match.AwayGoals
@@ -132,14 +142,12 @@ func (s *matchService) updateStandings(match *model.Match) error {
 
 	homeStanding.Played++
 	awayStanding.Played++
-
 	homeStanding.GoalsFor     += homeGoals
 	homeStanding.GoalsAgainst += awayGoals
 	awayStanding.GoalsFor     += awayGoals
 	awayStanding.GoalsAgainst += homeGoals
-
-	homeStanding.GoalDiff = homeStanding.GoalsFor - homeStanding.GoalsAgainst
-	awayStanding.GoalDiff = awayStanding.GoalsFor - awayStanding.GoalsAgainst
+	homeStanding.GoalDiff      = homeStanding.GoalsFor - homeStanding.GoalsAgainst
+	awayStanding.GoalDiff      = awayStanding.GoalsFor - awayStanding.GoalsAgainst
 
 	switch {
 	case homeGoals > awayGoals:
@@ -161,8 +169,4 @@ func (s *matchService) updateStandings(match *model.Match) error {
 		return err
 	}
 	return s.standingRepo.Update(awayStanding)
-}
-
-func (s *matchService) GetMatchByID(matchID uint) (*model.Match, error) {
-	return s.matchRepo.GetByID(matchID)
 }
