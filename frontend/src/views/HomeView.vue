@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <!-- Page title -->
+    <!-- Title -->
     <div>
       <h1 class="text-2xl font-bold text-gray-900">⚽ League Simulation</h1>
       <p class="text-sm text-gray-500 mt-1">4-team Premier League style simulation</p>
@@ -17,12 +17,17 @@
 
     <!-- Main grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left — Table (2/3) -->
+      <!-- Left -->
       <div class="lg:col-span-2 space-y-6">
         <StandingsTable :standings="store.standings" :current-week="store.currentWeek" />
+        <WeekResults
+          :week-results="store.weekResults"
+          :is-admin="authStore.isAuthenticated"
+          @edit-match="openEditModal"
+        />
       </div>
 
-      <!-- Right — Controls (1/3) -->
+      <!-- Right -->
       <div class="space-y-4">
         <WeekControls
           :status="store.status"
@@ -34,20 +39,40 @@
         />
       </div>
     </div>
+
+    <!-- Edit Modal -->
+    <EditMatchModal
+      :show="editModal.show"
+      :match="editModal.match"
+      :loading="editModal.loading"
+      :error="editModal.error"
+      @close="closeEditModal"
+      @save="handleEditSave"
+    />
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { reactive, onMounted } from 'vue'
 import { useLeagueStore } from '../stores/league'
 import { useAuthStore } from '../stores/auth'
 import { useLeague } from '../composables/useLeague'
+import { matchApi } from '../api/match'
 import StandingsTable from '../components/league/StandingsTable.vue'
 import WeekControls from '../components/league/WeekControls.vue'
+import WeekResults from '../components/match/WeekResults.vue'
+import EditMatchModal from '../components/match/EditMatchModal.vue'
 
 const store = useLeagueStore()
 const authStore = useAuthStore()
 const league = useLeague()
+
+const editModal = reactive({
+  show: false,
+  match: null,
+  loading: false,
+  error: null,
+})
 
 onMounted(async () => {
   await Promise.all([league.fetchTable(), league.fetchStatus()])
@@ -64,6 +89,32 @@ async function handlePlayAll() {
 async function handleReset() {
   if (confirm('Reset the league? All match results will be lost.')) {
     await league.resetLeague()
+  }
+}
+
+function openEditModal(match) {
+  editModal.match = match
+  editModal.error = null
+  editModal.show = true
+}
+
+function closeEditModal() {
+  editModal.show = false
+  editModal.match = null
+  editModal.error = null
+}
+
+async function handleEditSave({ matchId, homeGoals, awayGoals }) {
+  editModal.loading = true
+  editModal.error = null
+  try {
+    await matchApi.updateResult(matchId, homeGoals, awayGoals)
+    closeEditModal()
+    await league.fetchTable()
+  } catch (err) {
+    editModal.error = err.response?.data?.error || 'Failed to update match result'
+  } finally {
+    editModal.loading = false
   }
 }
 </script>
