@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	swaggerFiles "github.com/swaggo/files"
@@ -16,6 +17,15 @@ func SetupRouter(db *gorm.DB, redisClient *redis.Client) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())                  
 	r.Use(middleware.RequestLogger())      
+
+	// CORS
+    r.Use(cors.New(cors.Config{
+        AllowOrigins:     []string{"http://localhost:5173", "http://localhost:80"},
+        AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+        AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+        ExposeHeaders:    []string{"Content-Length"},
+        AllowCredentials: true,
+    }))
 
 	appCache := cache.NewCache(redisClient)
 
