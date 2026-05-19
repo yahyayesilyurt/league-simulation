@@ -65,6 +65,20 @@ services:
     networks:
       - leag_sim_network
 
+  # Vue.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: leag_sim_frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    networks:
+      - leag_sim_network
+
   # Nginx (Reverse Proxy)
   nginx:
     image: nginx:alpine
