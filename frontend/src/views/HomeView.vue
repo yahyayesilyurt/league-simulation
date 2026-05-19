@@ -17,7 +17,7 @@
 
     <!-- Main grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Left -->
+      <!-- Left — 2/3 -->
       <div class="lg:col-span-2 space-y-6">
         <StandingsTable :standings="store.standings" :current-week="store.currentWeek" />
         <WeekResults
@@ -27,7 +27,7 @@
         />
       </div>
 
-      <!-- Right -->
+      <!-- Right — 1/3 -->
       <div class="space-y-4">
         <WeekControls
           :status="store.status"
@@ -37,6 +37,7 @@
           @play-all="handlePlayAll"
           @reset="handleReset"
         />
+        <PredictionChart :predictions="store.predictions" :current-week="store.currentWeek" />
       </div>
     </div>
 
@@ -59,6 +60,7 @@ import { useAuthStore } from '../stores/auth'
 import { useLeague } from '../composables/useLeague'
 import { matchApi } from '../api/match'
 import StandingsTable from '../components/league/StandingsTable.vue'
+import PredictionChart from '../components/league/PredictionChart.vue'
 import WeekControls from '../components/league/WeekControls.vue'
 import WeekResults from '../components/match/WeekResults.vue'
 import EditMatchModal from '../components/match/EditMatchModal.vue'
@@ -75,7 +77,7 @@ const editModal = reactive({
 })
 
 onMounted(async () => {
-  await Promise.all([league.fetchTable(), league.fetchStatus()])
+  await league.fetchAll()
 })
 
 async function handleNextWeek() {

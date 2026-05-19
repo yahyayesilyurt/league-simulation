@@ -99,7 +99,12 @@ export function useLeague() {
     }
   }
 
+  async function fetchAll() {
+    await Promise.all([fetchTable(), fetchStatus(), fetchPredictions()])
+  }
+
   return {
+    fetchAll,
     fetchTable,
     fetchStatus,
     fetchPredictions,
