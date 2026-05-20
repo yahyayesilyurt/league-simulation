@@ -38,6 +38,7 @@
           @reset="handleReset"
         />
         <PredictionChart :predictions="store.predictions" :current-week="store.currentWeek" />
+        <WeekNavigator :week-results="store.weekResults" />
       </div>
     </div>
 
@@ -55,15 +56,16 @@
 
 <script setup>
 import { reactive, onMounted } from 'vue'
-import { useLeagueStore } from '../stores/league'
-import { useAuthStore } from '../stores/auth'
-import { useLeague } from '../composables/useLeague'
-import { matchApi } from '../api/match'
-import StandingsTable from '../components/league/StandingsTable.vue'
-import PredictionChart from '../components/league/PredictionChart.vue'
-import WeekControls from '../components/league/WeekControls.vue'
-import WeekResults from '../components/match/WeekResults.vue'
-import EditMatchModal from '../components/match/EditMatchModal.vue'
+import { useLeagueStore } from '@/stores/league'
+import { useAuthStore } from '@/stores/auth'
+import { useLeague } from '@/composables/useLeague'
+import { matchApi } from '@/api/match'
+import StandingsTable from '@/components/league/StandingsTable.vue'
+import PredictionChart from '@/components/league/PredictionChart.vue'
+import WeekControls from '@/components/league/WeekControls.vue'
+import WeekResults from '@/components/match/WeekResults.vue'
+import EditMatchModal from '@/components/match/EditMatchModal.vue'
+import WeekNavigator from '@/components/league/WeekNavigator.vue'
 
 const store = useLeagueStore()
 const authStore = useAuthStore()
