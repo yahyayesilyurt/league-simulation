@@ -31,8 +31,23 @@ export const useLeagueStore = defineStore('league', () => {
   }
 
   function addWeekResult(result) {
-    weekResults.value.push(result)
+    const index = weekResults.value.findIndex((w) => w.week === result.week)
+    if (index !== -1) {
+      weekResults.value[index] = result
+    } else {
+      weekResults.value.push(result)
+    }
     currentWeek.value = result.week
+  }
+
+  function updateMatchInStore(matchId, homeGoals, awayGoals) {
+    weekResults.value = weekResults.value.map((weekResult) => ({
+      ...weekResult,
+      matches: weekResult.matches.map((match) => {
+        if (match.id !== matchId) return match
+        return { ...match, home_goals: homeGoals, away_goals: awayGoals }
+      }),
+    }))
   }
 
   function reset() {
@@ -61,6 +76,7 @@ export const useLeagueStore = defineStore('league', () => {
     setLoading,
     setError,
     addWeekResult,
+    updateMatchInStore,
     reset,
   }
 })

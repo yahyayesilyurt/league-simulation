@@ -13,6 +13,7 @@ const routes = [
     path: '/login',
     name: 'login',
     component: LoginView,
+    meta: { guestOnly: true },
   },
   {
     path: '/stats',
@@ -24,6 +25,17 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes,
+})
+
+router.beforeEach((to, from, next) => {
+  const token = localStorage.getItem('token')
+
+  if (to.meta.guestOnly && token) {
+    next('/')
+    return
+  }
+
+  next()
 })
 
 export default router

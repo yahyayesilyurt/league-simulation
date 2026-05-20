@@ -15,6 +15,15 @@
       <button @click="store.setError(null)" class="text-red-400 hover:text-red-600">✕</button>
     </div>
 
+    <!-- Admin bar -->
+    <div
+      v-if="authStore.isAuthenticated"
+      class="flex items-center gap-2 px-4 py-2.5 bg-blue-50 border border-blue-100 rounded-lg text-sm text-blue-700"
+    >
+      <span>🔐</span>
+      <span>Admin mode active — you can edit match results and reset the league.</span>
+    </div>
+
     <!-- Main grid -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Left — 2/3 -->
@@ -23,7 +32,7 @@
         <WeekResults
           :week-results="store.weekResults"
           :is-admin="authStore.isAuthenticated"
-          @edit-match="openEditModal"
+          @edit-match="matchComposable.openEditModal"
         />
       </div>
 
@@ -42,41 +51,35 @@
       </div>
     </div>
 
-    <!-- Edit Modal -->
+    <!-- Edit Match Modal -->
     <EditMatchModal
-      :show="editModal.show"
-      :match="editModal.match"
-      :loading="editModal.loading"
-      :error="editModal.error"
-      @close="closeEditModal"
-      @save="handleEditSave"
+      :show="matchComposable.editModal.show"
+      :match="matchComposable.editModal.match"
+      :loading="matchComposable.editModal.loading"
+      :error="matchComposable.editModal.error"
+      @close="matchComposable.closeEditModal"
+      @save="matchComposable.saveMatchResult"
     />
   </div>
 </template>
 
 <script setup>
-import { reactive, onMounted } from 'vue'
-import { useLeagueStore } from '@/stores/league'
-import { useAuthStore } from '@/stores/auth'
-import { useLeague } from '@/composables/useLeague'
-import { matchApi } from '@/api/match'
-import StandingsTable from '@/components/league/StandingsTable.vue'
-import PredictionChart from '@/components/league/PredictionChart.vue'
-import WeekControls from '@/components/league/WeekControls.vue'
-import WeekResults from '@/components/match/WeekResults.vue'
-import EditMatchModal from '@/components/match/EditMatchModal.vue'
-import WeekNavigator from '@/components/league/WeekNavigator.vue'
+import { onMounted } from 'vue'
+import { useLeagueStore } from '../stores/league'
+import { useAuthStore } from '../stores/auth'
+import { useLeague } from '../composables/useLeague'
+import { useMatch } from '../composables/useMatch'
+import StandingsTable from '../components/league/StandingsTable.vue'
+import PredictionChart from '../components/league/PredictionChart.vue'
+import WeekControls from '../components/league/WeekControls.vue'
+import WeekNavigator from '../components/league/WeekNavigator.vue'
+import WeekResults from '../components/match/WeekResults.vue'
+import EditMatchModal from '../components/match/EditMatchModal.vue'
 
 const store = useLeagueStore()
 const authStore = useAuthStore()
 const league = useLeague()
-
-const editModal = reactive({
-  show: false,
-  match: null,
-  loading: false,
-  error: null,
-})
+const matchComposable = useMatch()
 
 onMounted(async () => {
   await league.fetchAll()
@@ -93,32 +96,6 @@ async function handlePlayAll() {
 async function handleReset() {
   if (confirm('Reset the league? All match results will be lost.')) {
     await league.resetLeague()
-  }
-}
-
-function openEditModal(match) {
-  editModal.match = match
-  editModal.error = null
-  editModal.show = true
-}
-
-function closeEditModal() {
-  editModal.show = false
-  editModal.match = null
-  editModal.error = null
-}
-
-async function handleEditSave({ matchId, homeGoals, awayGoals }) {
-  editModal.loading = true
-  editModal.error = null
-  try {
-    await matchApi.updateResult(matchId, homeGoals, awayGoals)
-    closeEditModal()
-    await league.fetchTable()
-  } catch (err) {
-    editModal.error = err.response?.data?.error || 'Failed to update match result'
-  } finally {
-    editModal.loading = false
   }
 }
 </script>
