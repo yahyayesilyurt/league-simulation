@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -296,4 +297,60 @@ func TestRecalculateAll_UnplayedMatchesIgnored(t *testing.T) {
 	assert.Equal(t, 0, awayStanding.Points)
 	assert.Equal(t, 0, homeStanding.Played)
 	assert.Equal(t, 0, awayStanding.Played)
+}
+
+func TestGetStandings_Error(t *testing.T) {
+	mockStanding := new(MockStandingRepository)
+	mockStanding.On("GetAll").Return([]model.Standing{}, errors.New("db error"))
+
+	svc := NewStandingService(mockStanding, nil, nil)
+	_, err := svc.GetStandings()
+
+	assert.Error(t, err)
+}
+
+func TestRecalculateAll_Errors(t *testing.T) {
+	mockTeam1 := new(MockTeamRepository)
+	mockTeam1.On("GetAll").Return([]model.Team{}, errors.New("team fetch error"))
+	svc1 := NewStandingService(nil, nil, mockTeam1)
+	assert.Error(t, svc1.RecalculateAll())
+
+	mockTeam2 := new(MockTeamRepository)
+	mockTeam2.On("GetAll").Return([]model.Team{{ID: 1}}, nil)
+	mockStanding2 := new(MockStandingRepository)
+	mockStanding2.On("ResetAll").Return(errors.New("reset error"))
+	svc2 := NewStandingService(mockStanding2, nil, mockTeam2)
+	assert.Error(t, svc2.RecalculateAll())
+
+	mockTeam3 := new(MockTeamRepository)
+	mockTeam3.On("GetAll").Return([]model.Team{{ID: 1}}, nil)
+	mockStanding3 := new(MockStandingRepository)
+	mockStanding3.On("ResetAll").Return(nil)
+	mockMatch3 := new(MockMatchRepository)
+	mockMatch3.On("GetAll").Return([]model.Match{}, errors.New("match fetch error"))
+	svc3 := NewStandingService(mockStanding3, mockMatch3, mockTeam3)
+	assert.Error(t, svc3.RecalculateAll())
+
+	mockTeam4 := new(MockTeamRepository)
+	mockTeam4.On("GetAll").Return([]model.Team{{ID: 1}}, nil)
+	mockStanding4 := new(MockStandingRepository)
+	mockStanding4.On("ResetAll").Return(nil)
+	mockMatch4 := new(MockMatchRepository)
+	mockMatch4.On("GetAll").Return([]model.Match{}, nil)
+	mockStanding4.On("GetByTeamID", uint(1)).Return((*model.Standing)(nil), errors.New("standing fetch error"))
+	svc4 := NewStandingService(mockStanding4, mockMatch4, mockTeam4)
+	assert.Error(t, svc4.RecalculateAll())
+
+	mockTeam5 := new(MockTeamRepository)
+	mockTeam5.On("GetAll").Return([]model.Team{{ID: 1}}, nil)
+	mockStanding5 := new(MockStandingRepository)
+	mockStanding5.On("ResetAll").Return(nil)
+	mockMatch5 := new(MockMatchRepository)
+	mockMatch5.On("GetAll").Return([]model.Match{}, nil) 
+	
+	mockStanding5.On("GetByTeamID", uint(1)).Return(&model.Standing{TeamID: 1}, nil)
+	mockStanding5.On("Update", mock.AnythingOfType("*model.Standing")).Return(errors.New("update error"))
+	
+	svc5 := NewStandingService(mockStanding5, mockMatch5, mockTeam5)
+	assert.Error(t, svc5.RecalculateAll())
 }

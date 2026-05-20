@@ -258,3 +258,201 @@ func TestReset_Success(t *testing.T) {
 	assert.Contains(t, body, "status")
 	mockLeague.AssertExpectations(t)
 }
+
+// GET /league/fixtures
+
+func TestGetFixtures_Success(t *testing.T) {
+	mockLeague := new(MockLeagueService)
+	mockPred   := new(MockPredictionService)
+
+	fixtures := []model.Match{
+		{ID: 1, Week: 1, HomeTeamID: 1, AwayTeamID: 2},
+		{ID: 2, Week: 1, HomeTeamID: 3, AwayTeamID: 4},
+	}
+
+	mockLeague.On("GetFixtures").Return(fixtures, nil)
+
+	r := setupTestRouter(mockLeague, mockPred)
+	w := makeRequest(t, r, http.MethodGet, "/league/fixtures", nil)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	body := parseResponse(t, w)
+	assert.Contains(t, body, "fixtures")
+	mockLeague.AssertExpectations(t)
+}
+
+// POST /league/play-all
+
+func TestPlayAll_Success(t *testing.T) {
+	mockLeague := new(MockLeagueService)
+	mockPred   := new(MockPredictionService)
+
+	result := &model.PlayAllResult{
+		TotalWeeksPlayed: 6,
+		Weeks:            []model.WeekResult{},
+	}
+
+	mockLeague.On("PlayAll").Return(result, nil)
+
+	r := setupTestRouter(mockLeague, mockPred)
+	w := makeRequest(t, r, http.MethodPost, "/league/play-all", nil)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockLeague.AssertExpectations(t)
+}
+
+func TestPlayAll_AlreadyFinished(t *testing.T) {
+	mockLeague := new(MockLeagueService)
+	mockPred   := new(MockPredictionService)
+
+	mockLeague.On("PlayAll").Return(
+		(*model.PlayAllResult)(nil),
+		assert.AnError,
+	)
+
+	r := setupTestRouter(mockLeague, mockPred)
+	w := makeRequest(t, r, http.MethodPost, "/league/play-all", nil)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	mockLeague.AssertExpectations(t)
+}
+
+// GET /league/predictions
+
+func TestGetPredictions_Empty(t *testing.T) {
+	mockLeague := new(MockLeagueService)
+	mockPred   := new(MockPredictionService)
+
+	mockPred.On("GetPredictions").Return([]service.TeamPrediction{}, nil)
+
+	r := setupTestRouter(mockLeague, mockPred)
+	w := makeRequest(t, r, http.MethodGet, "/league/predictions", nil)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockPred.AssertExpectations(t)
+}
+
+// Week number edge cases
+
+func TestGetWeek_Week6_Valid(t *testing.T) {
+	mockLeague := new(MockLeagueService)
+	mockPred   := new(MockPredictionService)
+
+	mockLeague.On("GetWeek", 6).Return([]model.Match{}, nil)
+
+	r := setupTestRouter(mockLeague, mockPred)
+	w := makeRequest(t, r, http.MethodGet, "/league/week/6", nil)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockLeague.AssertExpectations(t)
+}
+
+func TestGetWeek_Week1_Valid(t *testing.T) {
+	mockLeague := new(MockLeagueService)
+	mockPred   := new(MockPredictionService)
+
+	mockLeague.On("GetWeek", 1).Return([]model.Match{}, nil)
+
+	r := setupTestRouter(mockLeague, mockPred)
+	w := makeRequest(t, r, http.MethodGet, "/league/week/1", nil)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	mockLeague.AssertExpectations(t)
+}
+
+// GET /league/status — in_progress
+
+func TestGetStatus_InProgress(t *testing.T) {
+	mockLeague := new(MockLeagueService)
+	mockPred   := new(MockPredictionService)
+
+	status := &model.LeagueStatus{
+		CurrentWeek:    3,
+		LeagueFinished: false,
+		MatchesPlayed:  6,
+		MatchesLeft:    6,
+		Status:         "in_progress",
+	}
+
+	mockLeague.On("GetStatus").Return(status, nil)
+
+	r := setupTestRouter(mockLeague, mockPred)
+	w := makeRequest(t, r, http.MethodGet, "/league/status", nil)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	body := parseResponse(t, w)
+	assert.Equal(t, "in_progress", body["status"])
+	assert.Equal(t, float64(3), body["current_week"])
+	mockLeague.AssertExpectations(t)
+}
+
+// GET /league/table - Service Error
+
+func TestGetStandings_ServiceError(t *testing.T) {
+    mockLeague := new(MockLeagueService)
+    mockPred   := new(MockPredictionService)
+
+    mockLeague.On("GetStandings").Return(([]model.Standing)(nil), assert.AnError)
+
+    r := setupTestRouter(mockLeague, mockPred)
+    w := makeRequest(t, r, http.MethodGet, "/league/table", nil)
+
+    assert.Equal(t, http.StatusInternalServerError, w.Code)
+
+    body := parseResponse(t, w)
+    assert.Contains(t, body, "error")
+    mockLeague.AssertExpectations(t)
+}
+
+// GET /league/status - Service Error
+
+func TestGetStatus_ServiceError(t *testing.T) {
+    mockLeague := new(MockLeagueService)
+    mockPred   := new(MockPredictionService)
+
+    mockLeague.On("GetStatus").Return((*model.LeagueStatus)(nil), assert.AnError)
+
+    r := setupTestRouter(mockLeague, mockPred)
+    w := makeRequest(t, r, http.MethodGet, "/league/status", nil)
+
+    assert.Equal(t, http.StatusInternalServerError, w.Code)
+    
+    body := parseResponse(t, w)
+    assert.Contains(t, body, "error")
+    mockLeague.AssertExpectations(t)
+}
+
+// GET /league/predictions - Service Error
+
+func TestGetPredictions_ServiceError(t *testing.T) {
+    mockLeague := new(MockLeagueService)
+    mockPred   := new(MockPredictionService)
+
+    mockPred.On("GetPredictions").Return(([]service.TeamPrediction)(nil), assert.AnError)
+
+    r := setupTestRouter(mockLeague, mockPred)
+    w := makeRequest(t, r, http.MethodGet, "/league/predictions", nil)
+
+    assert.Equal(t, http.StatusInternalServerError, w.Code)
+    mockPred.AssertExpectations(t)
+}
+
+// POST /league/reset - Service Error
+
+func TestReset_ServiceError(t *testing.T) {
+    mockLeague := new(MockLeagueService)
+    mockPred   := new(MockPredictionService)
+
+    mockLeague.On("Reset").Return((*model.LeagueStatus)(nil), assert.AnError)
+
+    r := setupTestRouter(mockLeague, mockPred)
+    w := makeRequest(t, r, http.MethodPost, "/league/reset", nil)
+
+    assert.Equal(t, http.StatusInternalServerError, w.Code)
+    
+    body := parseResponse(t, w)
+    assert.Contains(t, body, "error")
+    mockLeague.AssertExpectations(t)
+}
