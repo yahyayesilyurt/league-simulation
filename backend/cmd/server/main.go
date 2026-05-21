@@ -3,13 +3,8 @@
 // @description     A four-team football league simulation API. Match simulation, league table, and championship prediction based on Premier League rules.
 // @termsOfService  http://swagger.io/terms/
 
-// @contact.name   API Support
-// @contact.email  admin@league-simulation.com
-
 // @license.name  MIT
-// @license.url   https://opensource.org/licenses/MIT
 
-// @host      localhost:8080
 // @BasePath  /
 
 // @securityDefinitions.apikey BearerAuth
