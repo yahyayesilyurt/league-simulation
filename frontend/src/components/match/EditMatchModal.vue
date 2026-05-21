@@ -15,7 +15,7 @@
           <div class="flex items-center justify-between gap-4 mb-6">
             <!-- Home -->
             <div class="flex-1 text-center">
-              <div class="text-2xl mb-1">{{ teamEmoji(match?.home_team?.name) }}</div>
+              <TeamLogo :name="match?.home_team?.name" :size="48" class="mx-auto mb-1" />
               <div class="text-xs font-medium text-gray-700">{{ match?.home_team?.name }}</div>
               <input
                 v-model.number="homeGoals"
@@ -30,7 +30,7 @@
 
             <!-- Away -->
             <div class="flex-1 text-center">
-              <div class="text-2xl mb-1">{{ teamEmoji(match?.away_team?.name) }}</div>
+              <TeamLogo :name="match?.away_team?.name" :size="48" class="mx-auto mb-1" />
               <div class="text-xs font-medium text-gray-700">{{ match?.away_team?.name }}</div>
               <input
                 v-model.number="awayGoals"
@@ -70,6 +70,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import TeamLogo from '../ui/TeamLogo.vue'
 
 const props = defineProps({
   show: { type: Boolean, default: false },

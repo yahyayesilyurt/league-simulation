@@ -49,13 +49,8 @@
         >
           <div class="flex items-center justify-between text-sm">
             <div class="flex items-center gap-2">
-              <span
-                class="w-3 h-3 rounded-full inline-block"
-                :style="{ backgroundColor: chartColors[index] }"
-              ></span>
-              <span class="font-medium text-gray-700">
-                {{ teamEmoji(pred.team_name) }} {{ pred.team_name }}
-              </span>
+              <TeamLogo :name="pred.team_name" :size="22" />
+              <span class="font-medium text-gray-700">{{ pred.team_name }}</span>
             </div>
             <div class="flex items-center gap-3 text-xs text-gray-500">
               <span>{{ pred.current_points }} pts</span>
@@ -96,6 +91,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import { Chart, ArcElement, Tooltip, Legend, DoughnutController } from 'chart.js'
+import TeamLogo from '../ui/TeamLogo.vue'
 
 Chart.register(ArcElement, Tooltip, Legend, DoughnutController)
 

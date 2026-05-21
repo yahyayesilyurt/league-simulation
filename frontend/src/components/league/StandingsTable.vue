@@ -46,12 +46,12 @@
 
               <!-- Club -->
               <td class="px-4 py-3">
-                <div class="flex items-center gap-2">
-                  <span class="text-lg">{{ teamEmoji(standing.team?.name) }}</span>
+                <div class="flex items-center gap-2.5">
+                  <TeamLogo :name="standing.team?.name" :size="28" />
                   <span class="font-medium text-gray-800">{{ standing.team?.name }}</span>
                   <span
                     v-if="standing.team?.strength"
-                    class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded"
+                    class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded hidden sm:inline"
                   >
                     {{ standing.team.strength }}
                   </span>
@@ -101,6 +101,8 @@
 </template>
 
 <script setup>
+import TeamLogo from '../ui/TeamLogo.vue'
+
 const props = defineProps({
   standings: { type: Array, default: () => [] },
   currentWeek: { type: Number, default: 0 },

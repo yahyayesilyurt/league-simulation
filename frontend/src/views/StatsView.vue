@@ -92,7 +92,7 @@
               >
                 <td class="px-5 py-3">
                   <div class="flex items-center gap-2">
-                    <span class="text-lg">{{ teamEmoji(stat.name) }}</span>
+                    <TeamLogo :name="stat.name" :size="28" />
                     <span class="font-medium text-gray-800">{{ stat.name }}</span>
                   </div>
                 </td>
@@ -156,6 +156,7 @@ import {
 import { useLeagueStore } from '../stores/league'
 import { useLeague } from '../composables/useLeague'
 import StatCard from '../components/ui/StatCard.vue'
+import TeamLogo from '../components/ui/TeamLogo.vue'
 
 Chart.register(
   BarElement,

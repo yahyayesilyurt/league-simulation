@@ -60,7 +60,7 @@
             <span class="font-medium text-gray-700 text-xs">
               {{ shortName(match.home_team?.name) }}
             </span>
-            <span>{{ teamEmoji(match.home_team?.name) }}</span>
+            <TeamLogo :name="match.home_team?.name" :size="22" />
           </div>
 
           <!-- Score -->
@@ -82,7 +82,7 @@
 
           <!-- Away -->
           <div class="flex items-center gap-1.5 flex-1">
-            <span>{{ teamEmoji(match.away_team?.name) }}</span>
+            <TeamLogo :name="match.away_team?.name" :size="22" />
             <span class="font-medium text-gray-700 text-xs">
               {{ shortName(match.away_team?.name) }}
             </span>
@@ -100,7 +100,7 @@
             class="flex items-center gap-2 py-1.5 text-xs border-b border-gray-50 last:border-0"
           >
             <span class="w-4 text-center font-bold text-gray-400">{{ i + 1 }}</span>
-            <span>{{ teamEmoji(s.team?.name) }}</span>
+            <TeamLogo :name="s.team?.name" :size="18" />
             <span class="flex-1 font-medium text-gray-700">
               {{ shortName(s.team?.name) }}
             </span>
@@ -121,6 +121,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import TeamLogo from '../ui/TeamLogo.vue'
 
 const props = defineProps({
   weekResults: { type: Array, default: () => [] },

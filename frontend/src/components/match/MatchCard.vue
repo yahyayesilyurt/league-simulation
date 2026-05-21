@@ -14,7 +14,7 @@
           <span class="font-semibold text-gray-800 text-sm">
             {{ match.home_team?.name }}
           </span>
-          <span class="text-xl">{{ teamEmoji(match.home_team?.name) }}</span>
+          <TeamLogo :name="match.home_team?.name" :size="32" />
         </div>
         <div class="text-xs text-gray-400 mt-0.5">Home</div>
       </div>
@@ -38,7 +38,7 @@
       <!-- Away team -->
       <div class="flex-1 text-left">
         <div class="flex items-center gap-2">
-          <span class="text-xl">{{ teamEmoji(match.away_team?.name) }}</span>
+          <TeamLogo :name="match.away_team?.name" :size="32" />
           <span class="font-semibold text-gray-800 text-sm">
             {{ match.away_team?.name }}
           </span>
@@ -73,6 +73,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import TeamLogo from '../ui/TeamLogo.vue'
 
 const props = defineProps({
   match: { type: Object, required: true },
