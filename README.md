@@ -242,3 +242,9 @@ docker compose down
 # Full reset (removes volumes)
 docker compose down -v
 ```
+
+---
+
+## ✅ Task Tracker
+
+The file containing the tasks planned and executed for the project: [`./task_tracker.md`](./task_tracker.md)
