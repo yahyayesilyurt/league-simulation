@@ -1,0 +1,64 @@
+name: League Simulation CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  backend-test:
+    name: Backend Tests & Coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+
+      - name: Install Dependencies
+        run: go mod download
+
+      - name: Run Tests and Generate Coverage
+        run: go test -v -coverprofile=coverage.out ./...
+
+      - name: Check Coverage Threshold (80%)
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Current Coverage: $COVERAGE%"
+
+          if (( $(echo "$COVERAGE < 80.0" | bc -l) )); then
+            echo "ERROR: Test coverage is below 80%. ($COVERAGE%). Pipeline is being shut down."
+            exit 1
+          else
+            echo "SUCCESSFUL: Test coverage exceeded the 80% mark ($COVERAGE%)."
+          fi
+
+  frontend-build:
+    name: Frontend Build Check
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Vue App
+        run: npm run build
